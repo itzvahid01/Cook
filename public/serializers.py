@@ -4,25 +4,32 @@ from .models import CustomUser, Course, Order, Product, Order_Item, Payment, Enr
 from rest_framework import serializers
 from .models import CustomUser
 
+from rest_framework import serializers
 
 class CustomUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    is_admin = serializers.SerializerMethodField(read_only=True)  # اضافه کردن فیلد ادمین
 
     class Meta:
         model = CustomUser
         fields = [
             'id',
+            'profile_img',
             'phone',
             'name',
             'family',
             'city',
             'address',
             'code_posti',
-            'email',
             'is_active',
             'password',
+            'is_admin',  # اضافه شد
         ]
-        read_only_fields = ['id', 'is_active']
+        read_only_fields = ['id', 'is_active', 'is_admin','phone']
+
+    def get_is_admin(self, obj):
+        # اگر مدل CustomUser فیلد is_staff یا is_superuser دارد:
+        return getattr(obj, 'is_staff', False) or getattr(obj, 'is_superuser', False)
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -40,6 +47,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
 
 class CourseSerializer(serializers.ModelSerializer):
     teacher = CustomUserSerializer(read_only=True, source='teacher_id')
@@ -64,7 +72,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
         fields = ['id', 'image']
 
 class ProductSerializer(serializers.ModelSerializer):
-    images = ProductImageSerializer(many=True, required=False)  # related_name در مدل ProductImage
+    images = ProductImageSerializer(many=True, required=False)
 
     class Meta:
         model = Product

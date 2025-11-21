@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     CustomUserViewSet, CourseViewSet, OrderViewSet, ProductViewSet,
     OrderItemViewSet, PaymentViewSet, EnrollmentViewSet,
-    verify_number, CodeCheckR, CodeCheckL
+    verify_number, CodeCheckR, CodeCheckL,checklogin,LogoutView
 )
 
 # ---------- Swagger ----------
@@ -51,6 +51,7 @@ urlpatterns = [
     # ثبت‌نام و ورود با کد
     path('api/register/', CodeCheckR.as_view(), name='register'),
     path('api/login/', CodeCheckL.as_view(), name='login'),
+    path('api/logout/', LogoutView.as_view(), name='logout'),
 
     # JWT Token refresh
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -60,4 +61,6 @@ urlpatterns = [
 
     # اگر نیاز باشه شماره‌تایید معمولی هم اضافه بشه
     path('api/verify-number/', verify_number, name='verify-number'),
+    #صفحه اصلی
+    path('api/checklogin',checklogin,name='checklogin')
 ]

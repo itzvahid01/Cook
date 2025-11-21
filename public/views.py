@@ -1,11 +1,10 @@
 from rest_framework import viewsets, permissions, generics, status
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_yasg.utils import swagger_auto_schema
-
 import random, datetime
 
 from .models import CustomUser, Course, Order, Product, Order_Item, Payment, Enrollment
@@ -14,7 +13,17 @@ from .serializers import (
     ProductSerializer, OrderItemSerializer, PaymentSerializer,
     EnrollmentSerializer, RegisterSerializer
 )
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def delete(self, request):
+        try:
+            refresh_token = request.data["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()  # بلاک کردن توکن
+            return Response({"detail": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 # ---------- Custom Permissions ----------
 class IsAdminOrReadOnly(permissions.BasePermission):
     """
@@ -85,6 +94,14 @@ class RegisterView(generics.CreateAPIView):
     @swagger_auto_schema(request_body=RegisterSerializer)
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(
+            {"message": "ثبت نام موفقیت آمیز بود"},
+            status=status.HTTP_201_CREATED
+        )
 
 # ---------- Phone Verification ----------
 @api_view(['POST'])
@@ -101,6 +118,29 @@ def verify_number(request):
     except CustomUser.DoesNotExist:
         return Response({"status": "not found"}, status=404)
 
+#---------- Home ------------
+
+@api_view(['GET'])
+def checklogin(request):
+    user = request.user
+
+    if user.is_authenticated:
+        data = {
+            "is_active": True,
+            "name": user.name,
+            "family": user.family,
+            "profile_image": request.build_absolute_uri(user.profile_img.url) if user.profile_img else None
+        }
+    else:
+        # اگر کاربر لاگین نکرده
+        data = {
+            "is_active": False,
+            "name": None,
+            "family": None,
+            "profile_image": None
+        }
+
+    return Response(data, status=status.HTTP_200_OK)
 # ---------- Code-based Login / Register ----------
 codes = {}  # نگهداری کدها با زمان ثبت
 CODE_EXPIRY_MINUTES = 2

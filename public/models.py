@@ -7,51 +7,66 @@ from django.core.validators import RegexValidator
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.core.validators import RegexValidator
 from django.db import models
-
 class CustomUser(AbstractUser):
-    # اعتبارسنجی شماره موبایل
     phone_validator = RegexValidator(
         regex=r'^0\d{10}$',
         message='Phone number must start with 0 and be exactly 11 digits.'
     )
-    name = models.CharField(max_length=50, verbose_name="name",blank=True,null=True)
-    family = models.CharField(max_length=50, verbose_name="family",blank=True,null=True)
-    city = models.CharField(max_length=100, verbose_name="city",blank=True,null=True)
-    address = models.TextField(verbose_name="address",blank=True,null=True)
-    code_posti = models.CharField(max_length=10, verbose_name="code_posti",blank=True,null=True)
+    profile_img = models.ImageField(upload_to='',null=True,blank=True,default='dp_image.jpg')
+    name = models.CharField(max_length=50, blank=True, null=True)
+    family = models.CharField(max_length=50, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    code_posti_validator = RegexValidator(
+    regex=r'^\d{10}$',
+    message='کد پستی باید دقیقاً ۱۰ رقم باشد و فقط شامل عدد باشد.'
+)
+
     username = None
-    # فیلد شماره موبایل (اصلی برای ورود)
+    birth_day = models.DateField(blank=True,null=True)
+
+    class NationalCodeChoices(models.IntegerChoices):
+        PERSON = 1, "شخصی"
+        COMPANY = 2, "شرکتی"
+
+    national_code = models.IntegerField(
+        choices=NationalCodeChoices.choices,
+        blank=True,
+        null=True
+    )
+
     phone = models.CharField(
         max_length=11,
         unique=True,
         validators=[phone_validator],
         verbose_name='Phone number'
     )
-    # گروه‌ها و دسترسی‌ها (برای جلوگیری از conflict در related_name)
+    code_posti = models.CharField(
+        max_length=10,
+        unique=True,
+        validators=[code_posti_validator],
+        verbose_name='code posti',
+        null=True,
+        blank=True
+    )
+
     groups = models.ManyToManyField(
         Group,
         related_name='customuser_set',
         blank=True,
-        help_text='The groups this user belongs to.',
-        verbose_name='Groups'
     )
 
     user_permissions = models.ManyToManyField(
         Permission,
         related_name='customuser_permissions_set',
         blank=True,
-        help_text='Specific permissions for this user.',
-        verbose_name='User permissions'
     )
 
-    # حالا ورود بر اساس phone انجام میشه
     USERNAME_FIELD = 'phone'
-    REQUIRED_FIELDS = []  # چون phone برای ورود کافی است
+    REQUIRED_FIELDS = []
 
     def __str__(self):
-        # اگر username پر بود، نمایش داده میشه، وگرنه phone
-        return self.username or self.phone
-
+        return self.phone
 
 class Course(m.Model):
     teacher_id  = m.ForeignKey(CustomUser,on_delete=m.CASCADE,null=True,blank=True)
@@ -81,11 +96,11 @@ class Product(m.Model):
     discount = m.IntegerField(null=True, blank=True)
     stock = m.IntegerField()
     # می‌توانی یک تصویر اصلی هم داشته باشی
-    main_image = m.ImageField(upload_to='product/img', null=True, blank=True)
+    main_image = m.ImageField(upload_to='media/product/img', null=True, blank=True)
 
 class ProductImage(m.Model):
     product = m.ForeignKey(Product, on_delete=m.CASCADE, related_name='images')
-    image = m.ImageField(upload_to='product/img')
+    image = m.ImageField(upload_to='media/product/img')
 
     def save(self, *args, **kwargs):
         if self.product.images.count() >= 3 and not self.pk:

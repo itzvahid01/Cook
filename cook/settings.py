@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'drf_yasg',
     'public',
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 MIDDLEWARE = [
@@ -146,5 +147,5 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,               # refresh token قدیمی غیرقابل استفاده شود
 }
 # مسیر فایل‌های آپلود شده (تصاویر، فایل‌ها و …)
-MEDIA_URL = '/media/'              # URL برای دسترسی به فایل‌ها
-MEDIA_ROOT = BASE_DIR / ''    # مسیر ذخیره‌ی واقعی روی سرور
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
