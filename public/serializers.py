@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, Course, Order, Product, Order_Item, Payment, Enrollment
+from .models import CustomUser, Course, Order, Product, Order_Item, Payment, Enrollment,Categury
 
 from rest_framework import serializers
 from .models import CustomUser
@@ -62,42 +62,44 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'user', 'date', 'total_price', 'status']
-
 from rest_framework import serializers
-from .models import Product, ProductImage
-
-class ProductImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductImage
-        fields = ['id', 'image']
-
+from public.models import Product
 class ProductSerializer(serializers.ModelSerializer):
-    images = ProductImageSerializer(many=True, required=False)
+    images = serializers.SerializerMethodField()
+    tag = serializers.SerializerMethodField()  # متن تگ به جای ID
+    url = serializers.SerializerMethodField()  # URL کامل محصول بر اساس slug
 
     class Meta:
         model = Product
-        fields = ['id', 'title', 'description', 'price', 'finaly_price', 'discount', 'stock', 'main_image', 'images']
+        fields = ['id', 'title', 'description', 'price', 'discount', 'stock',
+                  'images', 'expiration_date', 'weight', 'tag', 'slug', 'url']
 
-    def create(self, validated_data):
-        images_data = validated_data.pop('images', [])
-        product = Product.objects.create(**validated_data)
-        for image_data in images_data[:3]:  # محدود به ۳ تصویر
-            ProductImage.objects.create(product=product, **image_data)
-        return product
+    def get_images(self, obj):
+        request = self.context.get('request')
+        image_urls = []
 
-    def update(self, instance, validated_data):
-        images_data = validated_data.pop('images', None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        if obj.product_img and request:
+            image_urls.append(request.build_absolute_uri(obj.product_img.url))
 
-        if images_data is not None:
-            # حذف تصاویر قدیمی و اضافه کردن تصاویر جدید (حداکثر ۳)
-            instance.images.all().delete()
-            for image_data in images_data[:3]:
-                ProductImage.objects.create(product=instance, **image_data)
+        for image in obj.images.all():
+            if request:
+                image_urls.append(request.build_absolute_uri(image.image.url))
+            else:
+                image_urls.append(image.image.url)
 
-        return instance
+        return image_urls
+
+    def get_tag(self, obj):
+        # برگشت دادن متن تگ به جای ID
+        return obj.tag.title if obj.tag else None
+
+    def get_url(self, obj):
+        # URL کامل محصول بر اساس slug
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.get_absolute_url())
+        return obj.get_absolute_url()
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True, source='product_id')
@@ -151,3 +153,40 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['phone']
+from rest_framework import serializers
+from public.models import Categury
+
+# Serializer برای لیست کتگوری‌ها (بدون products)
+class CateguryListSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Categury
+        fields = ['title', 'cat_img', 'slug', 'url']
+
+    def get_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.get_absolute_url())
+        return obj.get_absolute_url()
+
+
+# Serializer برای جزئیات کتگوری (با products)
+class CateguryDetailSerializer(serializers.ModelSerializer):
+    products = serializers.SerializerMethodField()
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Categury
+        fields = ['title', 'cat_img', 'url', 'products']
+
+    def get_products(self, obj):
+        request = self.context.get('request')
+        products = Product.objects.filter(tag__cat=obj).order_by('-created_at')
+        return ProductSerializer(products, many=True, context={'request': request}).data
+
+    def get_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.get_absolute_url())
+        return obj.get_absolute_url()

@@ -7,7 +7,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     CustomUserViewSet, CourseViewSet, OrderViewSet, ProductViewSet,
     OrderItemViewSet, PaymentViewSet, EnrollmentViewSet,
-    verify_number, CodeCheckR, CodeCheckL,checklogin,LogoutView
+    verify_number, CodeCheckR, CodeCheckL, checklogin, LogoutView,
+    staff_page, TeacherProductViewSet, TeacherCourseViewSet,CateguryViewSet
 )
 
 # ---------- Swagger ----------
@@ -26,10 +27,15 @@ schema_view = get_schema_view(
 router = routers.DefaultRouter()
 router.register(r'courses', CourseViewSet, basename='course')
 router.register(r'products', ProductViewSet, basename='product')
+router.register(r'categury', CateguryViewSet, basename='categury')
 router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'order-items', OrderItemViewSet, basename='order-item')
 router.register(r'payments', PaymentViewSet, basename='payment')
 router.register(r'enrollments', EnrollmentViewSet, basename='enrollment')
+
+# اضافه کردن ViewSet های مخصوص استاد (staff)
+router.register(r'staff/products', TeacherProductViewSet, basename='teacher-product')
+router.register(r'staff/courses', TeacherCourseViewSet, basename='teacher-course')
 
 # مسیر اختصاصی برای کاربر فعلی
 custom_user_view = CustomUserViewSet.as_view({
@@ -56,11 +62,15 @@ urlpatterns = [
     # JWT Token refresh
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
-    # بقیه ViewSet ها از طریق router
-    path('api/', include(router.urls)),
-
     # اگر نیاز باشه شماره‌تایید معمولی هم اضافه بشه
     path('api/verify-number/', verify_number, name='verify-number'),
-    #صفحه اصلی
-    path('api/checklogin',checklogin,name='checklogin')
+
+    # صفحه اصلی
+    path('api/checklogin/', checklogin, name='checklogin'),
+
+    # staff page
+    path('api/staff/', staff_page, name='staff_page'),
+
+    # مسیرهای ViewSet از طریق router
+    path('api/', include(router.urls)),
 ]
