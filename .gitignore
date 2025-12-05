@@ -1,0 +1,27 @@
+# Environment files
+.env
+*.env
+.env.*
+
+# Media uploads (user uploaded files)
+media/
+media/*
+
+# __pycache__ and other cache folders
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django static (if collected)
+staticfiles/
+static/
+
+# VS Code
+.vscode/
+
+# SQLite database (اختیاری)
+db.sqlite3
+
+# Logs
+*.log

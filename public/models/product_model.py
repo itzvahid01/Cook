@@ -3,6 +3,8 @@ from PIL import Image
 from django.utils.text import slugify
 from django.db import models
 from django.urls import reverse
+from django.utils.functional import cached_property
+from public.utils import build_media_path, delete_product_folder
 class Categury(models.Model):
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
@@ -63,7 +65,7 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True) 
     update_at = models.DateTimeField(auto_now=True) 
     product_img = models.ImageField(
-        upload_to='img/product/', 
+        upload_to='product', 
         null=True, 
         blank=True, 
         default='di_cook.png'
@@ -100,12 +102,19 @@ class Product(models.Model):
             if width != self.REQUIRED_WIDTH or height != self.REQUIRED_HEIGHT:
                 img = img.resize((self.REQUIRED_WIDTH, self.REQUIRED_HEIGHT), Image.LANCZOS)
                 img.save(self.product_img.path)
+        
+    def delete(self, *args, **kwargs):
+        delete_product_folder("product", self)
+        super().delete(*args, **kwargs)
+
+    
+def product_image_path(instance, filename):
+    return build_media_path("product", instance.product, filename)
+
 
 class ProductImage(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='product/img')
-    created_at = models.DateTimeField(auto_now_add=True) 
-    update_at = models.DateTimeField(auto_now=True) 
+    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to=product_image_path)
 
     REQUIRED_WIDTH = 600
     REQUIRED_HEIGHT = 400
@@ -114,21 +123,15 @@ class ProductImage(models.Model):
     def save(self, *args, **kwargs):
         if self.product.images.count() >= 3 and not self.pk:
             raise ValidationError("حداکثر ۳ تصویر می‌توانید اضافه کنید")
-        
-        super().save(*args, **kwargs)  # ذخیره اولیه برای دسترسی به فایل image
+
+        super().save(*args, **kwargs)
 
         img = Image.open(self.image.path)
         width, height = img.size
 
-        # اگر اندازه خیلی متفاوت بود، ارور بده
         if abs(width - self.REQUIRED_WIDTH) > self.TOLERANCE or abs(height - self.REQUIRED_HEIGHT) > self.TOLERANCE:
-            # می‌تونی خودت resize کنی یا ارور بده
-            raise ValidationError(
-                f"ابعاد تصویر باید نزدیک {self.REQUIRED_WIDTH}x{self.REQUIRED_HEIGHT} باشد. "
-                f"(اندازه فعلی: {width}x{height})"
-            )
+            raise ValidationError("ابعاد تصویر مناسب نیست")
 
-        # اگر نزدیک بود، خودش resize کنه دقیقاً روی 600x400
         if width != self.REQUIRED_WIDTH or height != self.REQUIRED_HEIGHT:
             img = img.resize((self.REQUIRED_WIDTH, self.REQUIRED_HEIGHT), Image.LANCZOS)
             img.save(self.image.path)

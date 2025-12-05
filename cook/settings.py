@@ -40,7 +40,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_yasg',
-    'public',
+    'public.apps.PublicConfig', 
+    'watson',
+    'django_filters',
     'rest_framework_simplejwt.token_blacklist',
 ]
 
@@ -79,13 +81,20 @@ AUTH_USER_MODEL = 'public.CustomUser'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# settings.py
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'django_db',
+        'USER': 'django_user',
+        'PASSWORD': 'django_pass',
+        'HOST': 'localhost',
+        'PORT': '5433',  # همین پورتی که در اسکریپت تنظیم کردیم
+        'OPTIONS': {
+            'connect_timeout': 10,
+        }
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -131,14 +140,16 @@ CORS_ALLOWED_ORIGINS = [
 # یا اجازه دادن به کل شبکه (در محیط تست)
 CORS_ALLOW_ALL_ORIGINS = True
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'SEARCH_PARAM': 'search',  # پارامتر جستجو
+    'ORDERING_PARAM': 'ordering',  # پارامتر مرتب‌سازی
 }
-
-
 from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),   # کوتاه‌مدت
